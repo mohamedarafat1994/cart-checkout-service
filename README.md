@@ -31,7 +31,7 @@ A production-grade **Cart Checkout & Payment** backend built with **Java 17 + Sp
 
 ```bash
 # Clone the repository
-git clone https://github.com/<your-username>/cart-checkout-service.git
+git clone https://github.com/mohamedarafat1994/cart-checkout-service.git
 cd cart-checkout-service
 
 # Build and run
