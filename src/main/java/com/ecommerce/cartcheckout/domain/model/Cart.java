@@ -32,9 +32,6 @@ public class Cart {
 
     private Instant updatedAt;
 
-    /**
-     * Factory method — only way to create a Cart.
-     */
     public static Cart create() {
         Cart cart = new Cart();
         cart.status = CartStatus.ACTIVE;
@@ -43,9 +40,6 @@ public class Cart {
         return cart;
     }
 
-    /**
-     * Adds an item to the cart. Cart must be ACTIVE.
-     */
     public CartItem addItem(String productId, int quantity, BigDecimal price) {
         if (status != CartStatus.ACTIVE) {
             throw new IllegalStateException("Cannot modify a checked-out cart");
@@ -63,9 +57,6 @@ public class Cart {
         return item;
     }
 
-    /**
-     * Locks the cart for checkout. Idempotent if already checked out.
-     */
     public void checkout() {
         if (items.isEmpty()) {
             throw new IllegalStateException("Cannot checkout an empty cart");
@@ -77,9 +68,6 @@ public class Cart {
         this.updatedAt = Instant.now();
     }
 
-    /**
-     * Calculates the total price of all items in the cart.
-     */
     public BigDecimal getTotalPrice() {
         return items.stream()
                 .map(CartItem::getSubtotal)

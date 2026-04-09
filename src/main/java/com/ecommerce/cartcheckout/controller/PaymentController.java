@@ -19,10 +19,6 @@ public class PaymentController {
 
     private final PaymentService paymentService;
 
-    /**
-     * Start payment for an order.
-     * Triggers the mock payment provider to process asynchronously.
-     */
     @PostMapping("/orders/{orderId}/payment/start")
     public ResponseEntity<Dtos.PaymentStartResponse> startPayment(@PathVariable UUID orderId) {
         PaymentAttempt attempt = paymentService.startPayment(orderId);
@@ -39,10 +35,7 @@ public class PaymentController {
         return ResponseEntity.status(HttpStatus.ACCEPTED).body(response);
     }
 
-    /**
-     * Webhook endpoint called by the payment provider.
-     * Handles CONFIRMED and FAILED results idempotently.
-     */
+
     @PostMapping("/payments/webhook")
     public ResponseEntity<Dtos.WebhookResponse> handleWebhook(
             @Valid @RequestBody Dtos.WebhookRequest request) {

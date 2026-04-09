@@ -39,15 +39,9 @@ public class Order {
 
     private Instant updatedAt;
 
-    /**
-     * Optimistic locking to prevent concurrent state corruption.
-     */
     @Version
     private Long version;
 
-    /**
-     * Factory method — creates an Order from a checked-out Cart.
-     */
     public static Order createFromCart(Cart cart) {
         Order order = new Order();
         order.cart = cart;
@@ -58,26 +52,16 @@ public class Order {
         return order;
     }
 
-    /**
-     * Transitions the order to a new state, enforcing the state machine.
-     * @throws IllegalStateException if the transition is not allowed
-     */
     public void transitionTo(OrderStatus newStatus) {
         this.status.validateTransitionTo(newStatus);
         this.status = newStatus;
         this.updatedAt = Instant.now();
     }
 
-    /**
-     * Checks if payment can be initiated for this order.
-     */
     public boolean canStartPayment() {
         return status == OrderStatus.CREATED || status == OrderStatus.PAYMENT_FAILED;
     }
 
-    /**
-     * Checks if there is an active (PENDING) payment attempt.
-     */
     public boolean hasActivePendingPayment() {
         return paymentAttempts.stream()
                 .anyMatch(PaymentAttempt::isPending);

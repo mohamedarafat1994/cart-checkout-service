@@ -15,9 +15,6 @@ public interface OrderRepository extends JpaRepository<Order, UUID> {
 
     Optional<Order> findByCartId(UUID cartId);
 
-    /**
-     * Pessimistic write lock for safe concurrent webhook processing.
-     */
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT o FROM Order o WHERE o.id = :orderId")
     Optional<Order> findByIdWithLock(UUID orderId);

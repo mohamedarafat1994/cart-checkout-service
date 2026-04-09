@@ -30,16 +30,9 @@ public class PaymentAttempt {
     @Column(nullable = false, precision = 12, scale = 2)
     private BigDecimal amount;
 
-    /**
-     * Unique key to ensure idempotent webhook processing.
-     * Format: {orderId}_{attemptNumber}
-     */
     @Column(nullable = false, unique = true)
     private String idempotencyKey;
 
-    /**
-     * Reference ID returned by the mock payment provider.
-     */
     private String providerReference;
 
     @Column(nullable = false, updatable = false)
@@ -47,9 +40,6 @@ public class PaymentAttempt {
 
     private Instant updatedAt;
 
-    /**
-     * Factory method for creating a new payment attempt.
-     */
     public static PaymentAttempt create(Order order, String idempotencyKey) {
         PaymentAttempt attempt = new PaymentAttempt();
         attempt.order = order;
@@ -61,9 +51,6 @@ public class PaymentAttempt {
         return attempt;
     }
 
-    /**
-     * Marks the payment as confirmed.
-     */
     public void confirm(String providerReference) {
         if (this.status != PaymentStatus.PENDING) {
             throw new IllegalStateException(
@@ -74,9 +61,7 @@ public class PaymentAttempt {
         this.updatedAt = Instant.now();
     }
 
-    /**
-     * Marks the payment as failed.
-     */
+
     public void fail(String providerReference) {
         if (this.status != PaymentStatus.PENDING) {
             throw new IllegalStateException(

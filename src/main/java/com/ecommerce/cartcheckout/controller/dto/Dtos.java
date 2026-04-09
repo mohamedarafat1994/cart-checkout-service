@@ -10,8 +10,6 @@ import java.util.UUID;
 
 public class Dtos {
 
-    // ── Cart DTOs ──
-
     @Data @Builder
     public static class AddItemRequest {
         @NotBlank(message = "productId is required")
@@ -43,8 +41,6 @@ public class Dtos {
         private BigDecimal subtotal;
     }
 
-    // ── Order DTOs ──
-
     @Data @Builder
     public static class OrderResponse {
         private UUID id;
@@ -54,8 +50,6 @@ public class Dtos {
         private Instant createdAt;
         private Instant updatedAt;
     }
-
-    // ── Payment DTOs ──
 
     @Data @Builder
     public static class PaymentStartResponse {
@@ -76,7 +70,7 @@ public class Dtos {
         private String idempotencyKey;
 
         @NotBlank
-        private String result; // "CONFIRMED" or "FAILED"
+        private String result; 
 
         private String providerReference;
     }
@@ -86,8 +80,6 @@ public class Dtos {
         private String status;
         private String message;
     }
-
-    // ── Error DTO ──
 
     @Data @Builder
     public static class ErrorResponse {

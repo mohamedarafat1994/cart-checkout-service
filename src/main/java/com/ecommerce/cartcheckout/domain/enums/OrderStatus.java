@@ -3,19 +3,6 @@ package com.ecommerce.cartcheckout.domain.enums;
 import java.util.EnumSet;
 import java.util.Set;
 
-/**
- * Order State Machine:
- * 
- *   CREATED ──────► PENDING_PAYMENT ──────► PAID
- *                        │                    
- *                        ▼                    
- *                   PAYMENT_FAILED ──────► PENDING_PAYMENT (retry)
- *                        │
- *                        ▼
- *                    CANCELLED
- * 
- * CREATED can also transition directly to CANCELLED.
- */
 public enum OrderStatus {
 
     CREATED {
@@ -53,15 +40,9 @@ public enum OrderStatus {
         }
     };
 
-    /**
-     * Returns the set of states this status can transition to.
-     */
     public abstract Set<OrderStatus> allowedTransitions();
 
-    /**
-     * Validates whether a transition from this state to the target is allowed.
-     * @throws IllegalStateException if transition is invalid
-     */
+  
     public void validateTransitionTo(OrderStatus target) {
         if (!allowedTransitions().contains(target)) {
             throw new IllegalStateException(
@@ -71,9 +52,6 @@ public enum OrderStatus {
         }
     }
 
-    /**
-     * Checks if this is a terminal (final) state.
-     */
     public boolean isTerminal() {
         return allowedTransitions().isEmpty();
     }
