@@ -1,0 +1,163 @@
+{
+  "info": {
+    "name": "Cart Checkout Service",
+    "description": "Complete test collection covering: Happy Path, Payment Failure + Retry, Duplicate Webhook, Edge Cases",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:8080" }
+  ],
+  "item": [
+    {
+      "name": "Flow 1 — Happy Path",
+      "item": [
+        {
+          "name": "1.1 Create Cart",
+          "event": [{ "listen": "test", "script": { "exec": ["var json = pm.response.json();", "pm.test('201 Created', () => pm.response.to.have.status(201));", "pm.test('ACTIVE', () => pm.expect(json.status).to.eql('ACTIVE'));", "pm.collectionVariables.set('cartId', json.id);"], "type": "text/javascript" }}],
+          "request": { "method": "POST", "url": "{{baseUrl}}/carts" }
+        },
+        {
+          "name": "1.2 Add Item 1",
+          "event": [{ "listen": "test", "script": { "exec": ["pm.test('200 OK', () => pm.response.to.have.status(200));", "pm.test('1 item', () => pm.expect(pm.response.json().items.length).to.eql(1));"], "type": "text/javascript" }}],
+          "request": { "method": "POST", "url": "{{baseUrl}}/carts/{{cartId}}/items", "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode": "raw", "raw": "{\"productId\":\"PROD-001\",\"quantity\":2,\"price\":29.99}" }}
+        },
+        {
+          "name": "1.3 Add Item 2",
+          "event": [{ "listen": "test", "script": { "exec": ["pm.test('2 items', () => pm.expect(pm.response.json().items.length).to.eql(2));", "pm.test('total=109.97', () => pm.expect(pm.response.json().totalPrice).to.eql(109.97));"], "type": "text/javascript" }}],
+          "request": { "method": "POST", "url": "{{baseUrl}}/carts/{{cartId}}/items", "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode": "raw", "raw": "{\"productId\":\"PROD-002\",\"quantity\":1,\"price\":49.99}" }}
+        },
+        {
+          "name": "1.4 Checkout",
+          "event": [{ "listen": "test", "script": { "exec": ["var json = pm.response.json();", "pm.test('201', () => pm.response.to.have.status(201));", "pm.test('CREATED', () => pm.expect(json.status).to.eql('CREATED'));", "pm.collectionVariables.set('orderId', json.id);"], "type": "text/javascript" }}],
+          "request": { "method": "POST", "url": "{{baseUrl}}/carts/{{cartId}}/checkout" }
+        },
+        {
+          "name": "1.5 Start Payment",
+          "event": [{ "listen": "test", "script": { "exec": ["var json = pm.response.json();", "pm.test('202', () => pm.response.to.have.status(202));", "pm.test('PENDING', () => pm.expect(json.status).to.eql('PENDING'));", "pm.collectionVariables.set('paymentAttemptId', json.paymentAttemptId);", "pm.collectionVariables.set('idempotencyKey', json.idempotencyKey);"], "type": "text/javascript" }}],
+          "request": { "method": "POST", "url": "{{baseUrl}}/orders/{{orderId}}/payment/start" }
+        },
+        {
+          "name": "1.6 Verify PENDING_PAYMENT",
+          "event": [{ "listen": "test", "script": { "exec": ["pm.test('PENDING_PAYMENT', () => pm.expect(pm.response.json().status).to.eql('PENDING_PAYMENT'));"], "type": "text/javascript" }}],
+          "request": { "method": "GET", "url": "{{baseUrl}}/orders/{{orderId}}" }
+        },
+        {
+          "name": "1.7 Webhook CONFIRMED",
+          "event": [{ "listen": "test", "script": { "exec": ["pm.test('200 OK', () => pm.response.to.have.status(200));"], "type": "text/javascript" }}],
+          "request": { "method": "POST", "url": "{{baseUrl}}/payments/webhook", "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode": "raw", "raw": "{\"paymentAttemptId\":\"{{paymentAttemptId}}\",\"idempotencyKey\":\"{{idempotencyKey}}\",\"result\":\"CONFIRMED\",\"providerReference\":\"MOCK_REF_12345\"}" }}
+        },
+        {
+          "name": "1.8 Verify PAID",
+          "event": [{ "listen": "test", "script": { "exec": ["pm.test('PAID', () => pm.expect(pm.response.json().status).to.eql('PAID'));"], "type": "text/javascript" }}],
+          "request": { "method": "GET", "url": "{{baseUrl}}/orders/{{orderId}}" }
+        }
+      ]
+    },
+    {
+      "name": "Flow 2 — Payment Failure + Retry",
+      "item": [
+        {
+          "name": "2.1 Create Cart",
+          "event": [{ "listen": "test", "script": { "exec": ["pm.collectionVariables.set('cartId2', pm.response.json().id);"], "type": "text/javascript" }}],
+          "request": { "method": "POST", "url": "{{baseUrl}}/carts" }
+        },
+        {
+          "name": "2.2 Add Item",
+          "request": { "method": "POST", "url": "{{baseUrl}}/carts/{{cartId2}}/items", "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode": "raw", "raw": "{\"productId\":\"PROD-RETRY\",\"quantity\":1,\"price\":75.00}" }}
+        },
+        {
+          "name": "2.3 Checkout",
+          "event": [{ "listen": "test", "script": { "exec": ["pm.collectionVariables.set('orderId2', pm.response.json().id);"], "type": "text/javascript" }}],
+          "request": { "method": "POST", "url": "{{baseUrl}}/carts/{{cartId2}}/checkout" }
+        },
+        {
+          "name": "2.4 Start Payment",
+          "event": [{ "listen": "test", "script": { "exec": ["var j=pm.response.json();pm.collectionVariables.set('payAttemptId2',j.paymentAttemptId);pm.collectionVariables.set('idempKey2',j.idempotencyKey);"], "type": "text/javascript" }}],
+          "request": { "method": "POST", "url": "{{baseUrl}}/orders/{{orderId2}}/payment/start" }
+        },
+        {
+          "name": "2.5 Webhook FAILED",
+          "request": { "method": "POST", "url": "{{baseUrl}}/payments/webhook", "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode": "raw", "raw": "{\"paymentAttemptId\":\"{{payAttemptId2}}\",\"idempotencyKey\":\"{{idempKey2}}\",\"result\":\"FAILED\",\"providerReference\":\"MOCK_FAIL_001\"}" }}
+        },
+        {
+          "name": "2.6 Verify PAYMENT_FAILED",
+          "event": [{ "listen": "test", "script": { "exec": ["pm.test('PAYMENT_FAILED', () => pm.expect(pm.response.json().status).to.eql('PAYMENT_FAILED'));"], "type": "text/javascript" }}],
+          "request": { "method": "GET", "url": "{{baseUrl}}/orders/{{orderId2}}" }
+        },
+        {
+          "name": "2.7 Retry Payment",
+          "event": [{ "listen": "test", "script": { "exec": ["var j=pm.response.json();pm.collectionVariables.set('payAttemptId2b',j.paymentAttemptId);pm.collectionVariables.set('idempKey2b',j.idempotencyKey);"], "type": "text/javascript" }}],
+          "request": { "method": "POST", "url": "{{baseUrl}}/orders/{{orderId2}}/payment/start" }
+        },
+        {
+          "name": "2.8 Webhook CONFIRMED (retry)",
+          "request": { "method": "POST", "url": "{{baseUrl}}/payments/webhook", "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode": "raw", "raw": "{\"paymentAttemptId\":\"{{payAttemptId2b}}\",\"idempotencyKey\":\"{{idempKey2b}}\",\"result\":\"CONFIRMED\",\"providerReference\":\"MOCK_OK_RETRY\"}" }}
+        },
+        {
+          "name": "2.9 Verify PAID",
+          "event": [{ "listen": "test", "script": { "exec": ["pm.test('PAID after retry', () => pm.expect(pm.response.json().status).to.eql('PAID'));"], "type": "text/javascript" }}],
+          "request": { "method": "GET", "url": "{{baseUrl}}/orders/{{orderId2}}" }
+        }
+      ]
+    },
+    {
+      "name": "Flow 3 — Duplicate Webhook",
+      "item": [
+        {
+          "name": "3.1 Create Cart",
+          "event": [{ "listen": "test", "script": { "exec": ["pm.collectionVariables.set('cartId3', pm.response.json().id);"], "type": "text/javascript" }}],
+          "request": { "method": "POST", "url": "{{baseUrl}}/carts" }
+        },
+        {
+          "name": "3.2 Add Item",
+          "request": { "method": "POST", "url": "{{baseUrl}}/carts/{{cartId3}}/items", "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode": "raw", "raw": "{\"productId\":\"PROD-DUP\",\"quantity\":1,\"price\":50.00}" }}
+        },
+        {
+          "name": "3.3 Checkout",
+          "event": [{ "listen": "test", "script": { "exec": ["pm.collectionVariables.set('orderId3', pm.response.json().id);"], "type": "text/javascript" }}],
+          "request": { "method": "POST", "url": "{{baseUrl}}/carts/{{cartId3}}/checkout" }
+        },
+        {
+          "name": "3.4 Start Payment",
+          "event": [{ "listen": "test", "script": { "exec": ["var j=pm.response.json();pm.collectionVariables.set('payAttemptId3',j.paymentAttemptId);pm.collectionVariables.set('idempKey3',j.idempotencyKey);"], "type": "text/javascript" }}],
+          "request": { "method": "POST", "url": "{{baseUrl}}/orders/{{orderId3}}/payment/start" }
+        },
+        {
+          "name": "3.5 Webhook CONFIRMED (1st)",
+          "event": [{ "listen": "test", "script": { "exec": ["pm.test('200', () => pm.response.to.have.status(200));"], "type": "text/javascript" }}],
+          "request": { "method": "POST", "url": "{{baseUrl}}/payments/webhook", "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode": "raw", "raw": "{\"paymentAttemptId\":\"{{payAttemptId3}}\",\"idempotencyKey\":\"{{idempKey3}}\",\"result\":\"CONFIRMED\",\"providerReference\":\"MOCK_DUP_001\"}" }}
+        },
+        {
+          "name": "3.6 Webhook CONFIRMED (DUPLICATE)",
+          "event": [{ "listen": "test", "script": { "exec": ["pm.test('Duplicate handled', () => pm.response.to.have.status(200));"], "type": "text/javascript" }}],
+          "request": { "method": "POST", "url": "{{baseUrl}}/payments/webhook", "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode": "raw", "raw": "{\"paymentAttemptId\":\"{{payAttemptId3}}\",\"idempotencyKey\":\"{{idempKey3}}\",\"result\":\"CONFIRMED\",\"providerReference\":\"MOCK_DUP_001\"}" }}
+        },
+        {
+          "name": "3.7 Verify PAID (not corrupted)",
+          "event": [{ "listen": "test", "script": { "exec": ["pm.test('Still PAID', () => pm.expect(pm.response.json().status).to.eql('PAID'));"], "type": "text/javascript" }}],
+          "request": { "method": "GET", "url": "{{baseUrl}}/orders/{{orderId3}}" }
+        }
+      ]
+    },
+    {
+      "name": "Edge Cases",
+      "item": [
+        {
+          "name": "EC1 — Add to checked-out cart (409)",
+          "event": [{ "listen": "test", "script": { "exec": ["pm.test('409', () => pm.response.to.have.status(409));"], "type": "text/javascript" }}],
+          "request": { "method": "POST", "url": "{{baseUrl}}/carts/{{cartId}}/items", "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode": "raw", "raw": "{\"productId\":\"PROD-LATE\",\"quantity\":1,\"price\":10.00}" }}
+        },
+        {
+          "name": "EC2 — Double checkout (409)",
+          "event": [{ "listen": "test", "script": { "exec": ["pm.test('409', () => pm.response.to.have.status(409));"], "type": "text/javascript" }}],
+          "request": { "method": "POST", "url": "{{baseUrl}}/carts/{{cartId}}/checkout" }
+        },
+        {
+          "name": "EC3 — Pay PAID order (409)",
+          "event": [{ "listen": "test", "script": { "exec": ["pm.test('409', () => pm.response.to.have.status(409));"], "type": "text/javascript" }}],
+          "request": { "method": "POST", "url": "{{baseUrl}}/orders/{{orderId}}/payment/start" }
+        }
+      ]
+    }
+  ]
+}
